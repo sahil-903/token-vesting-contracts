@@ -54,6 +54,7 @@ module.exports = {
   networks: {
     mainnet: mainnetNetworkConfig(),
     goerli: goerliNetworkConfig(),
+    sepolia: sepoliaNetworkConfig(),
   },
   abiExporter: {
     path: "./build/abi",
@@ -102,6 +103,24 @@ function goerliNetworkConfig() {
 
   if (process.env.GOERLI_PRIVATE_KEY) {
     accountPrivateKey = `${process.env.GOERLI_PRIVATE_KEY}`;
+  }
+
+  return {
+    url: url,
+    accounts: [accountPrivateKey],
+  };
+}
+
+function sepoliaNetworkConfig() {
+  let url = "https://sepolia.infura.io/v3/";
+  let accountPrivateKey =
+    "0x0000000000000000000000000000000000000000000000000000000000000000";
+  if (process.env.SEPOLIA_ENDPOINT) {
+    url = `${process.env.SEPOLIA_ENDPOINT}`;
+  }
+
+  if (process.env.SEPOLIA_PRIVATE_KEY) {
+    accountPrivateKey = `${process.env.SEPOLIA_PRIVATE_KEY}`;
   }
 
   return {

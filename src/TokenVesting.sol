@@ -90,6 +90,7 @@ contract TokenVesting is Owned, ReentrancyGuard {
         bool _revocable,
         uint256 _amount
     ) external onlyOwner {
+        require(_start > getCurrentTime(), "TokenVesting: start time should be greater then current timestamp");
         require(
             getWithdrawableAmount() >= _amount,
             "TokenVesting: cannot create vesting schedule because not sufficient tokens"
@@ -118,8 +119,7 @@ contract TokenVesting is Owned, ReentrancyGuard {
         );
         vestingSchedulesTotalAmount = vestingSchedulesTotalAmount + _amount;
         vestingSchedulesIds.push(vestingScheduleId);
-        uint256 currentVestingCount = holdersVestingCount[_beneficiary];
-        holdersVestingCount[_beneficiary] = currentVestingCount + 1;
+        holdersVestingCount[_beneficiary] = holdersVestingCount[_beneficiary] + 1;
     }
 
     /**
@@ -337,21 +337,24 @@ contract TokenVesting is Owned, ReentrancyGuard {
     ) internal view returns (uint256) {
         // Retrieve the current time.
         uint256 currentTime = getCurrentTime();
-        // If the current time is before the cliff, no tokens are releasable.
-        if ((currentTime < vestingSchedule.cliff) || vestingSchedule.revoked) {
+        // If the current time should be less than or equal to cliff, or else no tokens are releasable.
+        if ((currentTime <= vestingSchedule.cliff) || vestingSchedule.revoked) {
             return 0;
         }
         // If the current time is after the vesting period, all tokens are releasable,
         // minus the amount already released.
         else if (
-            currentTime >= vestingSchedule.cliff + vestingSchedule.duration
+            // here we have to check from the start to the token durstion
+            // for eg: start is 1000 sec and durstion is 200 sec then we have check for after 1200 sec
+            currentTime > vestingSchedule.start + vestingSchedule.duration
         ) {
             return vestingSchedule.amountTotal - vestingSchedule.released;
         }
         // Otherwise, some tokens are releasable.
         else {
             // Compute the number of full vesting periods that have elapsed.
-            uint256 timeFromStart = currentTime - vestingSchedule.cliff;
+            // here timeFrom start should inculde cliff so will count from the vesting start time.
+            uint256 timeFromStart = currentTime - vestingSchedule.start;
             uint256 secondsPerSlice = vestingSchedule.slicePeriodSeconds;
             uint256 vestedSlicePeriods = timeFromStart / secondsPerSlice;
             uint256 vestedSeconds = vestedSlicePeriods * secondsPerSlice;
